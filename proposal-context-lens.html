@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ContextLens — Project Proposal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Tajawal:wght@300;400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060810;
+    --surface: #0d1120;
+    --card: #111827;
+    --accent: #00e5ff;
+    --accent2: #7c3aed;
+    --accent3: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --border: rgba(0,229,255,0.12);
+    --glow: rgba(0,229,255,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Cairo', sans-serif;
+    overflow-x: hidden;
+    line-height: 1.7;
+  }
+
+  /* ── NOISE TEXTURE ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0; opacity: .4;
+  }
+
+  section { position: relative; z-index: 1; }
+
+  /* ──────────────────────── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 4rem 2rem;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(0,229,255,.07) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 50% at 80% 80%, rgba(124,58,237,.08) 0%, transparent 60%);
+  }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: .5rem;
+    background: rgba(0,229,255,.08);
+    border: 1px solid rgba(0,229,255,.25);
+    border-radius: 999px;
+    padding: .35rem 1.1rem;
+    font-size: .8rem; letter-spacing: .08em;
+    color: var(--accent);
+    margin-bottom: 2rem;
+    animation: fadeDown .6s ease both;
+  }
+  .badge::before { content: '●'; font-size: .5rem; animation: pulse 2s infinite; }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  .hero-eyebrow {
+    font-family: 'Tajawal', sans-serif;
+    font-size: clamp(.85rem,2vw,1rem);
+    letter-spacing: .15em;
+    color: var(--muted);
+    margin-bottom: 1rem;
+    animation: fadeDown .7s .1s ease both;
+  }
+
+  .hero-title {
+    font-family: 'Tajawal', sans-serif;
+    font-size: clamp(2.8rem, 8vw, 6rem);
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 1.5rem;
+    animation: fadeDown .7s .2s ease both;
+  }
+
+  .hero-title .main { display: block; color: #fff; }
+  .hero-title .sub {
+    display: block;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-desc {
+    max-width: 640px;
+    font-size: clamp(1rem,2.5vw,1.2rem);
+    color: #94a3b8;
+    margin-bottom: 3rem;
+    animation: fadeDown .7s .3s ease both;
+  }
+
+  .hero-cta {
+    display: inline-flex; gap: 1rem; flex-wrap: wrap; justify-content: center;
+    animation: fadeDown .7s .4s ease both;
+  }
+
+  .btn {
+    padding: .85rem 2rem;
+    border-radius: 12px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 1rem; font-weight: 700;
+    cursor: pointer; border: none;
+    transition: transform .2s, box-shadow .2s;
+    text-decoration: none;
+  }
+  .btn:hover { transform: translateY(-2px); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent) 0%, #0099bb 100%);
+    color: #000;
+    box-shadow: 0 0 30px rgba(0,229,255,.35);
+  }
+  .btn-primary:hover { box-shadow: 0 0 45px rgba(0,229,255,.55); }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--text);
+    border: 1.5px solid var(--border);
+  }
+  .btn-outline:hover { border-color: rgba(0,229,255,.45); }
+
+  /* ── LENS VISUAL ── */
+  .lens-ring {
+    width: 340px; height: 340px;
+    border-radius: 50%;
+    position: relative;
+    margin: 0 auto 3rem;
+    animation: fadeDown .7s .15s ease both;
+  }
+
+  .lens-ring::before, .lens-ring::after {
+    content: '';
+    position: absolute; inset: -1px;
+    border-radius: 50%;
+  }
+  .lens-ring::before {
+    border: 2px solid transparent;
+    background: linear-gradient(135deg, var(--accent), var(--accent2), transparent) border-box;
+    -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: destination-out;
+    mask-composite: exclude;
+    animation: spin 8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .lens-inner {
+    position: absolute; inset: 16px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,229,255,.06) 0%, transparent 70%);
+    border: 1px solid rgba(0,229,255,.1);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+
+  .lens-icon {
+    font-size: 5rem;
+    filter: drop-shadow(0 0 20px rgba(0,229,255,.5));
+    animation: float 4s ease-in-out infinite;
+  }
+
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+
+  .scan-line {
+    position: absolute; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation: scan 2.5s ease-in-out infinite;
+  }
+  @keyframes scan {
+    0%   { top: 15%; opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { top: 85%; opacity: 0; }
+  }
+
+  /* ─── SECTION BASE ─── */
+  .section {
+    padding: 6rem 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-size: .75rem; letter-spacing: .2em;
+    color: var(--accent); text-transform: uppercase;
+    margin-bottom: .75rem; font-weight: 600;
+  }
+
+  .section-title {
+    font-family: 'Tajawal', sans-serif;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 1rem;
+  }
+
+  .section-desc {
+    color: #94a3b8;
+    font-size: 1.05rem;
+    max-width: 600px;
+    margin-bottom: 3rem;
+  }
+
+  /* ─── PROBLEM SECTION ─── */
+  .problem-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .problem-card {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 16px;
+    padding: 1.75rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color .3s, transform .3s;
+  }
+  .problem-card:hover { border-color: rgba(0,229,255,.3); transform: translateY(-4px); }
+  .problem-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    opacity: 0; transition: opacity .3s;
+  }
+  .problem-card:hover::before { opacity: 1; }
+
+  .problem-icon { font-size: 2rem; margin-bottom: .75rem; }
+  .problem-card h3 {
+    font-size: 1.1rem; font-weight: 700; color: #fff;
+    margin-bottom: .5rem;
+  }
+  .problem-card p { color: #94a3b8; font-size: .95rem; }
+
+  /* ─── SOLUTION / HOW IT WORKS ─── */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  .step {
+    background: var(--card);
+    padding: 2rem 1.5rem;
+    text-align: center;
+    position: relative;
+    transition: background .3s;
+  }
+  .step:hover { background: #161f35; }
+
+  .step-num {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1rem;
+    font-weight: 800; font-size: .9rem; color: #fff;
+  }
+
+  .step-icon { font-size: 2.2rem; margin-bottom: .75rem; }
+  .step h3 { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: .5rem; }
+  .step p { color: #94a3b8; font-size: .88rem; }
+
+  /* ─── USE CASES ─── */
+  .cases-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .case-card {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 16px;
+    padding: 1.75rem;
+    display: flex; flex-direction: column; gap: 1rem;
+    transition: border-color .3s, transform .3s;
+  }
+  .case-card:hover { border-color: rgba(124,58,237,.4); transform: translateY(-4px); }
+
+  .case-tag {
+    display: inline-block;
+    padding: .2rem .8rem;
+    border-radius: 999px;
+    font-size: .75rem; font-weight: 600;
+    background: rgba(124,58,237,.15);
+    color: #a78bfa;
+    border: 1px solid rgba(124,58,237,.25);
+    width: fit-content;
+  }
+
+  .case-scenario { font-size: .9rem; color: #cbd5e1; }
+  .case-arrow { color: var(--muted); font-size: .85rem; }
+
+  .case-output {
+    background: rgba(0,229,255,.05);
+    border: 1px solid rgba(0,229,255,.15);
+    border-radius: 10px;
+    padding: 1rem;
+    font-size: .9rem;
+    color: var(--accent);
+  }
+  .case-output span { color: #94a3b8; display: block; margin-top: .3rem; font-size: .85rem; }
+
+  /* ─── FEATURES ─── */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .feat {
+    padding: 1.5rem;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.06);
+    background: linear-gradient(135deg, var(--card), #0f1825);
+    transition: transform .3s;
+  }
+  .feat:hover { transform: translateY(-3px); }
+  .feat-icon { font-size: 1.8rem; margin-bottom: .75rem; }
+  .feat h3 { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: .4rem; }
+  .feat p { color: #94a3b8; font-size: .88rem; }
+
+  /* ─── TECH STACK ─── */
+  .tech-row {
+    display: flex; flex-wrap: wrap; gap: .75rem;
+    margin-bottom: 2rem;
+  }
+
+  .tech-pill {
+    display: flex; align-items: center; gap: .5rem;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 999px;
+    padding: .4rem 1.1rem;
+    font-size: .85rem; font-weight: 600; color: #cbd5e1;
+    transition: border-color .3s, color .3s;
+  }
+  .tech-pill:hover { border-color: var(--accent); color: var(--accent); }
+  .tech-pill .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+  }
+  .tech-pill.purple .dot { background: #a78bfa; }
+  .tech-pill.amber .dot { background: var(--accent3); }
+
+  /* ─── MARKET / WHY ─── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+  }
+
+  .stat-box {
+    text-align: center;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem 1rem;
+  }
+
+  .stat-num {
+    font-family: 'Tajawal', sans-serif;
+    font-size: 2.5rem; font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .stat-label { color: #64748b; font-size: .85rem; margin-top: .25rem; }
+
+  /* ─── ROADMAP ─── */
+  .roadmap {
+    display: flex; flex-direction: column; gap: 0;
+    position: relative;
+  }
+
+  .roadmap::before {
+    content: '';
+    position: absolute; right: 19px; top: 0; bottom: 0; width: 2px;
+    background: linear-gradient(to bottom, var(--accent), var(--accent2), transparent);
+    opacity: .3;
+  }
+
+  .phase {
+    display: flex; gap: 1.5rem; align-items: flex-start;
+    padding: 1.5rem 0;
+    padding-right: 3rem;
+    position: relative;
+  }
+
+  .phase-dot {
+    position: absolute; right: 10px; top: 1.85rem;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--bg);
+    border: 2px solid var(--accent);
+    flex-shrink: 0;
+    z-index: 1;
+  }
+  .phase:nth-child(2) .phase-dot { border-color: var(--accent2); }
+  .phase:nth-child(3) .phase-dot { border-color: var(--accent3); }
+  .phase:nth-child(4) .phase-dot { border-color: #34d399; }
+
+  .phase-content {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    flex: 1;
+  }
+  .phase-label {
+    font-size: .75rem; letter-spacing: .15em;
+    color: var(--accent); font-weight: 600;
+    text-transform: uppercase; margin-bottom: .4rem;
+  }
+  .phase:nth-child(2) .phase-label { color: #a78bfa; }
+  .phase:nth-child(3) .phase-label { color: var(--accent3); }
+  .phase:nth-child(4) .phase-label { color: #34d399; }
+  .phase-title { font-weight: 700; color: #fff; font-size: 1rem; margin-bottom: .4rem; }
+  .phase-desc { color: #94a3b8; font-size: .88rem; }
+
+  /* ─── TEAM / PRESENTER ─── */
+  .presenter-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2.5rem;
+    display: flex; align-items: center; gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .avatar {
+    width: 80px; height: 80px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; font-weight: 900; color: #fff;
+    flex-shrink: 0;
+    font-family: 'Tajawal', sans-serif;
+  }
+
+  .presenter-info h3 { font-size: 1.3rem; font-weight: 800; color: #fff; }
+  .presenter-info p { color: #94a3b8; font-size: .9rem; }
+  .github-link {
+    display: inline-flex; align-items: center; gap: .4rem;
+    color: var(--accent); font-size: .85rem; text-decoration: none;
+    margin-top: .5rem;
+    transition: opacity .2s;
+  }
+  .github-link:hover { opacity: .7; }
+
+  /* ─── FOOTER / CTA ─── */
+  .cta-section {
+    padding: 6rem 2rem;
+    text-align: center;
+    background: radial-gradient(ellipse 70% 50% at 50% 100%, rgba(0,229,255,.06) 0%, transparent 70%);
+  }
+
+  .cta-section h2 {
+    font-family: 'Tajawal', sans-serif;
+    font-size: clamp(2rem,5vw,3.5rem);
+    font-weight: 800; color: #fff;
+    margin-bottom: 1rem;
+  }
+  .cta-section p { color: #94a3b8; font-size: 1.05rem; margin-bottom: 2rem; }
+
+  /* ─── DIVIDER ─── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0,229,255,.2), transparent);
+    margin: 0 2rem;
+  }
+
+  /* ─── ANIMATIONS ─── */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .reveal {
+    opacity: 0; transform: translateY(30px);
+    transition: opacity .6s, transform .6s;
+  }
+  .reveal.visible { opacity: 1; transform: none; }
+
+  /* ─── FULL BLEED SECTIONS ─── */
+  .full-bleed {
+    background: var(--surface);
+    padding: 6rem 0;
+  }
+
+  /* ─── SCROLL INDICATOR ─── */
+  .scroll-hint {
+    position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: .5rem;
+    color: var(--muted); font-size: .75rem;
+    animation: fadeDown 1s .8s ease both;
+  }
+  .scroll-arrow {
+    width: 24px; height: 24px;
+    border-left: 2px solid var(--muted);
+    border-bottom: 2px solid var(--muted);
+    transform: rotate(-45deg);
+    animation: bounce 2s ease-in-out infinite;
+  }
+  @keyframes bounce { 0%,100%{transform:rotate(-45deg) translateY(0)} 50%{transform:rotate(-45deg) translateY(5px)} }
+
+  @media(max-width:600px) {
+    .presenter-box { flex-direction: column; }
+    .steps { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════ HERO ══════════════ -->
+<section class="hero">
+  <div class="badge">Project Proposal • 2025</div>
+
+  <div class="lens-ring">
+    <div class="lens-inner">
+      <div class="scan-line"></div>
+      <div class="lens-icon">🔭</div>
+    </div>
+  </div>
+
+  <p class="hero-eyebrow">مشروع تخرج / مشروع ريادي</p>
+  <h1 class="hero-title">
+    <span class="main">ContextLens</span>
+    <span class="sub">مترجم الحياة الواقعية</span>
+  </h1>
+  <p class="hero-desc">
+    تطبيق يحوّل الكاميرا إلى عقل ذكي يفهم العالم من حولك—<br>
+    مش بس يترجم الكلام، بيترجم <strong>المعنى</strong>.
+  </p>
+  <div class="hero-cta">
+    <a href="#solution" class="btn btn-primary">استكشف الفكرة</a>
+    <a href="#roadmap" class="btn btn-outline">خطة التنفيذ</a>
+  </div>
+
+  <div class="scroll-hint">
+    <span>اسكرول للأسفل</span>
+    <div class="scroll-arrow"></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════ PROBLEM ══════════════ -->
+<div class="full-bleed">
+<div class="section reveal" id="problem">
+  <p class="section-label">المشكلة</p>
+  <h2 class="section-title">العالم مليان معلومات—وإحنا مش فاهمينها</h2>
+  <p class="section-desc">كل يوم بتعدي جنب أشياء مش عارف إيه معناها أو إزاي تتعامل معاها.</p>
+
+  <div class="problem-grid">
+    <div class="problem-card">
+      <div class="problem-icon">💊</div>
+      <h3>الأدوية والمستلزمات</h3>
+      <p>تعليمات بخط صغير وكلام طبي معقد—ما حدش بيقراه صح.</p>
+    </div>
+    <div class="problem-card">
+      <div class="problem-icon">🌍</div>
+      <h3>السفر والأماكن الغريبة</h3>
+      <p>لافتات بلغة تانية، عادات مختلفة، وإشارات مش بتعرف تفسرها.</p>
+    </div>
+    <div class="problem-card">
+      <div class="problem-icon">⚡</div>
+      <h3>الأجهزة والتقنية</h3>
+      <p>أزرار وإعدادات معقدة من غير شرح واضح.</p>
+    </div>
+    <div class="problem-card">
+      <div class="problem-icon">📝</div>
+      <h3>الوثائق والعقود</h3>
+      <p>لغة قانونية وبنود مخفية—بتوقع من غير ما تفهم.</p>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ══════════════ SOLUTION ══════════════ -->
+<div id="solution">
+<div class="section reveal">
+  <p class="section-label">الحل</p>
+  <h2 class="section-title">صوّر أي حاجة — افهم كل حاجة</h2>
+  <p class="section-desc">ContextLens بيحلل الصورة والسياق ويديك فهم فوري، مش مجرد معلومة.</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">١</div>
+      <div class="step-icon">📸</div>
+      <h3>صوّر</h3>
+      <p>افتح الكاميرا على أي شيء حواليك</p>
+    </div>
+    <div class="step">
+      <div class="step-num">٢</div>
+      <div class="step-icon">🧠</div>
+      <h3>حلّل</h3>
+      <p>الذكاء الاصطناعي يتعرف على الشيء ويفهم السياق</p>
+    </div>
+    <div class="step">
+      <div class="step-num">٣</div>
+      <div class="step-icon">💡</div>
+      <h3>اشرح</h3>
+      <p>شرح مبسط + طريقة الاستخدام + تحذيرات</p>
+    </div>
+    <div class="step">
+      <div class="step-num">٤</div>
+      <div class="step-icon">🔍</div>
+      <h3>اكتشف</h3>
+      <p>معلومات مخفية ما تعرفها عن المنتج أو المكان</p>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ══════════════ USE CASES ══════════════ -->
+<div class="full-bleed">
+<div class="section reveal">
+  <p class="section-label">أمثلة واقعية</p>
+  <h2 class="section-title">يعني إيه في الحياة العملية؟</h2>
+  <p class="section-desc">مش مجرد ترجمة—ده فهم حقيقي للحياة اليومية.</p>
+
+  <div class="cases-grid">
+    <div class="case-card">
+      <span class="case-tag">💊 الصحة</span>
+      <div class="case-scenario">تصوّر علبة دواء من الصيدلية</div>
+      <div class="case-arrow">↓</div>
+      <div class="case-output">
+        "بروفين 400mg — مسكن ألم ومضاد التهاب"
+        <span>خذه بعد الأكل • لا تتجاوز 3 أقراص يومياً • تجنبه مع أدوية تخفيف الدم</span>
+      </div>
+    </div>
+
+    <div class="case-card">
+      <span class="case-tag">⚡ التقنية</span>
+      <div class="case-scenario">تصوّر لوحة كهرباء أو جهاز غريب</div>
+      <div class="case-arrow">↓</div>
+      <div class="case-output">
+        "قاطع الدارة الكهربائية للغرفة الرئيسية"
+        <span>لإعادة التشغيل: اضغط للأسفل ثم للأعلى • لا تلمسه بيد مبللة</span>
+      </div>
+    </div>
+
+    <div class="case-card">
+      <span class="case-tag">🌍 السفر</span>
+      <div class="case-scenario">تصوّر لافتة في شارع بمدينة أجنبية</div>
+      <div class="case-arrow">↓</div>
+      <div class="case-output">
+        "منطقة وقوف سيارات مأجورة • ٢€ / ساعة"
+        <span>الدفع عند الآلة القريبة • غرامة 50€ بدون تذكرة</span>
+      </div>
+    </div>
+
+    <div class="case-card">
+      <span class="case-tag">🛒 التسوق</span>
+      <div class="case-scenario">تصوّر منتج غذائي وتقرأ مكوناته</div>
+      <div class="case-arrow">↓</div>
+      <div class="case-output">
+        "يحتوي على E621 (MSG) و E110 (صبغة)"
+        <span>E110 ممنوع في بعض الدول • قد يسبب فرط نشاط عند الأطفال</span>
+      </div>
+    </div>
+
+    <div class="case-card">
+      <span class="case-tag">📜 الوثائق</span>
+      <div class="case-scenario">تصوّر عقد إيجار أو وثيقة رسمية</div>
+      <div class="case-arrow">↓</div>
+      <div class="case-output">
+        "بند التجديد التلقائي — ينتهي 31 مارس"
+        <span>⚠️ إذا لم تُبلغ قبل 30 يوم، يتجدد العقد تلقائياً لسنة كاملة</span>
+      </div>
+    </div>
+
+    <div class="case-card">
+      <span class="case-tag">🏛️ التعليم</span>
+      <div class="case-scenario">تصوّر تمثال أو معلم تاريخي</div>
+      <div class="case-arrow">↓</div>
+      <div class="case-output">
+        "أبو الهول — بُني حوالي 2500 ق.م"
+        <span>الوجه يمثل الفرعون خفرع • الأنف تضرر في القرن 14م وليس في الحرب الفرنسية</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ══════════════ FEATURES ══════════════ -->
+<div class="section reveal">
+  <p class="section-label">المميزات التقنية</p>
+  <h2 class="section-title">ما الذي يجعله مختلفاً؟</h2>
+
+  <div class="features-grid">
+    <div class="feat">
+      <div class="feat-icon">🎙️</div>
+      <h3>إدخال صوتي + بصري</h3>
+      <p>يفهم الصورة مع الصوت معاً للحصول على سياق أدق وشرح أشمل.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">🌐</div>
+      <h3>دعم متعدد اللغات</h3>
+      <p>يتعرف على أي لغة في الصورة ويعطيك الشرح بلغتك المفضلة.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">⚠️</div>
+      <h3>نظام التحذيرات الذكي</h3>
+      <p>يكتشف المعلومات الخطرة أو الخفية ويبرزها بشكل واضح.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">📍</div>
+      <h3>وعي بالموقع والسياق</h3>
+      <p>يأخذ بعين الاعتبار موقعك وعاداتك المحلية في الشرح.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">📶</div>
+      <h3>وضع أوفلاين جزئي</h3>
+      <p>بعض الوظائف تشتغل بدون إنترنت للاستخدام في أماكن بعيدة.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">🔒</div>
+      <h3>خصوصية المستخدم</h3>
+      <p>الصور لا تُحفظ على السيرفر إلا بموافقة صريحة من المستخدم.</p>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ══════════════ TECH ══════════════ -->
+<div class="full-bleed">
+<div class="section reveal">
+  <p class="section-label">التقنيات المستخدمة</p>
+  <h2 class="section-title">Stack التقني</h2>
+
+  <p style="color:#94a3b8; margin-bottom:1.5rem; font-size:.95rem;">الواجهة الأمامية</p>
+  <div class="tech-row">
+    <span class="tech-pill"><span class="dot"></span>React Native</span>
+    <span class="tech-pill"><span class="dot"></span>Expo</span>
+    <span class="tech-pill"><span class="dot"></span>TypeScript</span>
+    <span class="tech-pill"><span class="dot"></span>Tailwind / NativeWind</span>
+  </div>
+
+  <p style="color:#94a3b8; margin-bottom:1.5rem; font-size:.95rem;">الذكاء الاصطناعي</p>
+  <div class="tech-row">
+    <span class="tech-pill purple"><span class="dot"></span>Google Gemini Vision API</span>
+    <span class="tech-pill purple"><span class="dot"></span>OpenAI GPT-4o Vision</span>
+    <span class="tech-pill purple"><span class="dot"></span>Whisper (للصوت)</span>
+  </div>
+
+  <p style="color:#94a3b8; margin-bottom:1.5rem; font-size:.95rem;">الخلفية والبنية التحتية</p>
+  <div class="tech-row">
+    <span class="tech-pill amber"><span class="dot"></span>Node.js + Express</span>
+    <span class="tech-pill amber"><span class="dot"></span>Firebase</span>
+    <span class="tech-pill amber"><span class="dot"></span>Vercel / Railway</span>
+    <span class="tech-pill amber"><span class="dot"></span>Redis (للكاش)</span>
+  </div>
+</div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ══════════════ MARKET ══════════════ -->
+<div class="section reveal">
+  <p class="section-label">حجم السوق</p>
+  <h2 class="section-title">الفرصة السوقية</h2>
+
+  <div class="stats-row">
+    <div class="stat-box">
+      <div class="stat-num">1.8B</div>
+      <div class="stat-label">مستخدم كاميرا ذكي يومياً على مستوى العالم</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num">$8.5B</div>
+      <div class="stat-label">حجم سوق تطبيقات AR & Visual AI بحلول 2027</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num">73%</div>
+      <div class="stat-label">من المستهلكين يريدون معلومات فورية أثناء التسوق</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num">#1</div>
+      <div class="stat-label">فئة النمو في الذكاء الاصطناعي المحمول 2024-2025</div>
+    </div>
+  </div>
+
+  <div style="background:var(--card); border:1px solid var(--border); border-radius:16px; padding:2rem;">
+    <h3 style="color:#fff; font-size:1.1rem; margin-bottom:1rem; font-weight:700;">🎯 الجمهور المستهدف</h3>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1rem;">
+      <div style="display:flex; align-items:center; gap:.75rem;">
+        <span style="font-size:1.5rem;">✈️</span>
+        <div>
+          <div style="color:#fff; font-size:.9rem; font-weight:600;">المسافرون</div>
+          <div style="color:#64748b; font-size:.82rem;">يحتاجون فهم بيئات جديدة</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:.75rem;">
+        <span style="font-size:1.5rem;">👴</span>
+        <div>
+          <div style="color:#fff; font-size:.9rem; font-weight:600;">كبار السن</div>
+          <div style="color:#64748b; font-size:.82rem;">يحتاجون مساعدة في الأجهزة والأدوية</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:.75rem;">
+        <span style="font-size:1.5rem;">🎓</span>
+        <div>
+          <div style="color:#fff; font-size:.9rem; font-weight:600;">الطلاب</div>
+          <div style="color:#64748b; font-size:.82rem;">تعلم من البيئة المحيطة</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:.75rem;">
+        <span style="font-size:1.5rem;">🛍️</span>
+        <div>
+          <div style="color:#fff; font-size:.9rem; font-weight:600;">المستهلكون</div>
+          <div style="color:#64748b; font-size:.82rem;">قرارات شراء أذكى وأسرع</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ══════════════ ROADMAP ══════════════ -->
+<div class="full-bleed">
+<div class="section reveal" id="roadmap">
+  <p class="section-label">خطة التنفيذ</p>
+  <h2 class="section-title">Roadmap المشروع</h2>
+
+  <div class="roadmap">
+    <div class="phase">
+      <div class="phase-dot"></div>
+      <div class="phase-content">
+        <div class="phase-label">المرحلة الأولى — الشهر 1-2</div>
+        <div class="phase-title">🔬 MVP – النموذج الأولي</div>
+        <div class="phase-desc">تكامل Gemini Vision API • واجهة بسيطة لالتقاط الصور • شرح نصي فوري • اختبار مع 10 مستخدمين</div>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="phase-dot"></div>
+      <div class="phase-content">
+        <div class="phase-label">المرحلة الثانية — الشهر 3-4</div>
+        <div class="phase-title">🚀 Beta Launch</div>
+        <div class="phase-desc">إضافة الإدخال الصوتي • نظام التحذيرات الذكي • دعم أوفلاين جزئي • إطلاق تجريبي لـ 100 مستخدم</div>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="phase-dot"></div>
+      <div class="phase-content">
+        <div class="phase-label">المرحلة الثالثة — الشهر 5-6</div>
+        <div class="phase-title">📈 نمو وتحسين</div>
+        <div class="phase-desc">تحسين دقة النموذج • إضافة تخصيص حسب اهتمامات المستخدم • نشر على App Store و Play Store</div>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="phase-dot"></div>
+      <div class="phase-content">
+        <div class="phase-label">المرحلة الرابعة — الشهر 7+</div>
+        <div class="phase-title">💼 التوسع والتسييل</div>
+        <div class="phase-desc">API للشركات • باقة premium • شراكات مع سلاسل صيدليات ومتاجر • نموذج إيرادات Freemium</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ══════════════ PRESENTER ══════════════ -->
+<div class="section reveal">
+  <p class="section-label">مقدّم المشروع</p>
+  <h2 class="section-title">من أنا؟</h2>
+
+  <div class="presenter-box">
+    <div class="avatar">م</div>
+    <div class="presenter-info">
+      <h3>Mohamed Mansy</h3>
+      <p>Front-End Developer • مهتم بالذكاء الاصطناعي والتطبيقات التفاعلية</p>
+      <p style="margin-top:.4rem; color:#64748b; font-size:.85rem;">
+        مهارات: HTML • CSS • JavaScript • React.js • Firebase • Python
+      </p>
+      <a href="https://github.com/MMansy2010" target="_blank" class="github-link">
+        ⬡ github.com/MMansy2010
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ FINAL CTA ══════════════ -->
+<div class="cta-section">
+  <h2>الفكرة موجودة.<br>الوقت ده <span style="background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">دلوقتي.</span></h2>
+  <p>ContextLens مش بس تطبيق—ده طريقة جديدة لفهم العالم.</p>
+  <a href="#problem" class="btn btn-primary">ابدأ من الأول 🔭</a>
+
+  <div style="margin-top:3rem; color:#334155; font-size:.8rem;">
+    ContextLens Project Proposal © 2025 • Mohamed Mansy
+  </div>
+</div>
+
+<script>
+  // Scroll reveal
+  const reveals = document.querySelectorAll('.reveal');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.1 });
+  reveals.forEach(r => io.observe(r));
+</script>
+</body>
+</html>
